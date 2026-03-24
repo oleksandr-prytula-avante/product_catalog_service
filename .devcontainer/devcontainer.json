@@ -1,0 +1,17 @@
+{
+  "name": "Go + Spanner",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/usr/src/app",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.Go"
+      ],
+      "settings": {
+        "go.toolsManagement.autoUpdate": true
+      }
+    }
+  }
+}
