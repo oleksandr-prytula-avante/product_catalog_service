@@ -41,5 +41,5 @@ services:
     volumes:
       - ./scripts:/scripts
     working_dir: /scripts
-    entrypoint: ["/bin/sh", "/scripts/atlas-migrate.sh"]
+    entrypoint: ["/bin/sh", "/scripts/atlas-run.sh"]
     <<: *env

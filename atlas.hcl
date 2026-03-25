@@ -1,6 +1,6 @@
 env "local" {
-  url = getenv("ATLAS_DB_URL")
-  dev = getenv("ATLAS_DEV_URL")
+  url = "spanner://projects/${getenv("PROJECT_ID")}/instances/${getenv("INSTANCE")}/databases/${getenv("DATABASE")}?emulator=true"
+  dev = "spanner://projects/${getenv("PROJECT_ID")}/instances/${getenv("INSTANCE")}/databases/${getenv("DATABASE")}?emulator=true"
 
   migration {
     dir = "file://migrations"
