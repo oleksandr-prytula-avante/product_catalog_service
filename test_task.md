@@ -311,7 +311,13 @@ func (h *ProductHandler) CreateProduct(ctx context.Context, req *pb.CreateProduc
 
 Create the following Spanner tables:
 
-```sql
+```sqlG(20) NOT NULL,
+    created_at TIMESTAMP NOT NULL,
+    processed_at TIMESTAMP,
+) PRIMARY KEY (event_id);
+
+CREATE INDEX idx_outbox_status ON outbox_events(status, created_at);
+CREATE INDEX idx_products_category ON products(category, status);
 CREATE TABLE products (
     product_id STRING(36) NOT NULL,
     name STRING(255) NOT NULL,
@@ -333,13 +339,7 @@ CREATE TABLE outbox_events (
     event_type STRING(100) NOT NULL,
     aggregate_id STRING(36) NOT NULL,
     payload JSON NOT NULL,
-    status STRING(20) NOT NULL,
-    created_at TIMESTAMP NOT NULL,
-    processed_at TIMESTAMP,
-) PRIMARY KEY (event_id);
-
-CREATE INDEX idx_outbox_status ON outbox_events(status, created_at);
-CREATE INDEX idx_products_category ON products(category, status);
+    status STRIN
 ```
 
 ---

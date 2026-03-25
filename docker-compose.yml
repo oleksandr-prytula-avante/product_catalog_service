@@ -1,5 +1,9 @@
 version: "3.9"
 
+x-env: &env
+  env_file:
+    - .env
+
 services:
   app:
     build: .
@@ -8,17 +12,34 @@ services:
     volumes:
       - .:/usr/src/app
     working_dir: /usr/src/app
-    command: sleep infinity
+    command: tail -f /dev/null #or sleep infinity for .devcontainer
     depends_on:
-      - spanner
-    # - spanner-emulator
-    env_file:
-      - .env
+      - spanner-emulator
+    <<: *env
 
-  spanner:
+  spanner-emulator:
     image: gcr.io/cloud-spanner-emulator/emulator
     ports:
       - "9010:9010" # gRPC
       - "9020:9020" # HTTP
+    restart: always
+    <<: *env
+  
+  spanner-init:
+    image: google/cloud-sdk:slim
+    depends_on:
+      - spanner-emulator
+    volumes:
+      - ./scripts:/scripts
+    entrypoint: ["/bin/bash", "/scripts/spanner-init.sh"]
+    <<: *env
 
-  # spanner-emulator:
+  atlas-migrate:
+    image: ariga/atlas:latest
+    depends_on:
+      - spanner-emulator
+    volumes:
+      - ./scripts:/scripts
+    working_dir: /scripts
+    entrypoint: ["/bin/sh", "/scripts/atlas-migrate.sh"]
+    <<: *env

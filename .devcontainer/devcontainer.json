@@ -1,5 +1,5 @@
 {
-  "name": "Go + Spanner",
+  "name": "Product Catalog Service Dev Container",
   "dockerComposeFile": "../docker-compose.yml",
   "service": "app",
   "workspaceFolder": "/usr/src/app",
