@@ -35,11 +35,13 @@ services:
     <<: *env
 
   atlas-migrate:
-    image: ariga/atlas:latest
+    build:
+      context: .
+      dockerfile: docker/atlas.Dockerfile
     depends_on:
       - spanner-emulator
     volumes:
       - ./scripts:/scripts
     working_dir: /scripts
-    entrypoint: ["/bin/sh", "/scripts/atlas-run.sh"]
+    entrypoint: ["/bin/bash", "/scripts/atlas-run.sh"]
     <<: *env
