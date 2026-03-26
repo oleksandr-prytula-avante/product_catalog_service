@@ -3,7 +3,8 @@ x-env: &env
     - .env
 
 services:
-  app:
+  app-dev:
+    profiles: ["dev"]
     build:
       context: .
       dockerfile: docker/app.dev.Dockerfile
@@ -13,6 +14,20 @@ services:
       - .:/usr/src/app
     working_dir: /usr/src/app
     command: air
+    depends_on:
+      - spanner-emulator
+    <<: *env
+
+  app-build:
+    profiles: ["build"]
+    build:
+      context: .
+      dockerfile: docker/app.build.Dockerfile
+    ports:
+      - "${PORT}:${PORT}"
+    volumes:
+      - .:/usr/src/app
+    working_dir: /usr/src/app
     depends_on:
       - spanner-emulator
     <<: *env
@@ -39,7 +54,7 @@ services:
       context: .
       dockerfile: docker/atlas.Dockerfile
     depends_on:
-      - spanner-emulator
+      - spanner-init
     volumes:
       - ./scripts:/scripts
     working_dir: /scripts

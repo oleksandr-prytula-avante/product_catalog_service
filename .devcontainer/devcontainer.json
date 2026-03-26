@@ -1,7 +1,8 @@
 {
   "name": "Product Catalog Service Dev Container",
   "dockerComposeFile": "../docker-compose.yml",
-  "service": "app",
+  "service": "app-dev",
+  "runServices": ["app-dev", "atlas-migrate"],
   "workspaceFolder": "/usr/src/app",
   "customizations": {
     "vscode": {
