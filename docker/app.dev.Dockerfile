@@ -2,10 +2,11 @@ FROM golang:1.26-alpine
 
 WORKDIR /usr/src/app
 
+RUN apk add --no-cache git bash curl
+
 COPY go.mod go.sum* ./
 RUN [ -f go.sum ] && go mod download || true
 
-COPY . .
-RUN go build -v -o /usr/local/bin/app ./...
+RUN go install github.com/air-verse/air@latest
 
-CMD ["/usr/local/bin/app"]
+CMD ["air"]

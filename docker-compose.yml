@@ -1,18 +1,18 @@
-version: "3.9"
-
 x-env: &env
   env_file:
     - .env
 
 services:
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: docker/app.dev.Dockerfile
     ports:
       - "${PORT}:${PORT}"
     volumes:
       - .:/usr/src/app
     working_dir: /usr/src/app
-    command: tail -f /dev/null #or sleep infinity for .devcontainer
+    command: air
     depends_on:
       - spanner-emulator
     <<: *env

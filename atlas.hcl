@@ -3,6 +3,6 @@ env "local" {
   dev = "spanner://projects/${getenv("PROJECT_ID")}/instances/${getenv("INSTANCE")}/databases/${getenv("DATABASE")}?emulator=true"
 
   migration {
-    dir = "file://migrations"
+    dir = "file://db/migrations"
   }
 }
