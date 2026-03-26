@@ -14,6 +14,7 @@ services:
       - .:/usr/src/app
     working_dir: /usr/src/app
     command: air
+    restart: unless-stopped
     depends_on:
       - spanner-emulator
     <<: *env
@@ -28,15 +29,13 @@ services:
     volumes:
       - .:/usr/src/app
     working_dir: /usr/src/app
+    restart: always
     depends_on:
       - spanner-emulator
     <<: *env
 
   spanner-emulator:
     image: gcr.io/cloud-spanner-emulator/emulator
-    ports:
-      - "9010:9010" # gRPC
-      - "9020:9020" # HTTP
     restart: always
     <<: *env
   
@@ -47,6 +46,7 @@ services:
     volumes:
       - ./scripts:/scripts
     entrypoint: ["/bin/bash", "/scripts/spanner-init.sh"]
+    restart: on-failure
     <<: *env
 
   atlas-migrate:
@@ -54,9 +54,13 @@ services:
       context: .
       dockerfile: docker/atlas.Dockerfile
     depends_on:
-      - spanner-init
+      spanner-init:
+        condition: service_completed_successfully
     volumes:
       - ./scripts:/scripts
-    working_dir: /scripts
+      - ./db:/usr/src/app/db
+      - ./atlas.hcl:/usr/src/app/atlas.hcl
+    working_dir: /usr/src/app
     entrypoint: ["/bin/bash", "/scripts/atlas-run.sh"]
+    restart: no
     <<: *env

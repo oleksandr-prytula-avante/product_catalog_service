@@ -1,14 +1,13 @@
 #!/usr/bin/env sh
-
 set -e
 
 SERVICE=atlas-run
 
-. /log.sh
+. /scripts/log.sh
 
 log "Checking init migration"
 
-if [ -z "$(ls -A /db/migrations 2>/dev/null)" ]; then
+if [ -z "$(ls -A /usr/src/app/db/migrations 2>/dev/null)" ]; then
   log "Creating init migration"
 
   atlas migrate diff init \
