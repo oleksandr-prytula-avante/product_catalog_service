@@ -64,6 +64,7 @@ services:
         condition: service_completed_successfully
     environment:
       - ATLAS_NO_LOGIN=1
+      - SPANNER_EMULATOR_HOST=spanner-emulator:9010
     volumes:
       - ./scripts:/scripts
       - ./db:/usr/src/app/db
