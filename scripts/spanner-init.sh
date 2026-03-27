@@ -5,9 +5,6 @@ SERVICE=spanner-init
 
 . /scripts/log.sh
 
-export SPANNER_EMULATOR_HOST=spanner-emulator:9010
-export CLOUDSDK_API_ENDPOINT_OVERRIDES_SPANNER=http://spanner-emulator:9020/
-
 log "Spanner emulator host: $SPANNER_EMULATOR_HOST and API endpoint: $CLOUDSDK_API_ENDPOINT_OVERRIDES_SPANNER"
 
 gcloud config set auth/disable_credentials true

@@ -9,7 +9,7 @@ services:
       context: .
       dockerfile: docker/app.dev.Dockerfile
     ports:
-      - "${PORT}:${PORT}"
+      - "${APP_PORT}:${APP_PORT}"
     volumes:
       - .:/usr/src/app
     working_dir: /usr/src/app
@@ -25,7 +25,7 @@ services:
       context: .
       dockerfile: docker/app.build.Dockerfile
     ports:
-      - "${PORT}:${PORT}"
+      - "${APP_PORT}:${APP_PORT}"
     volumes:
       - .:/usr/src/app
     working_dir: /usr/src/app
@@ -37,6 +37,9 @@ services:
   spanner-emulator:
     image: gcr.io/cloud-spanner-emulator/emulator
     restart: always
+    ports:
+      - "9010:9010"
+      - "9020:9020"
     <<: *env
   
   spanner-init:
@@ -47,6 +50,9 @@ services:
       - ./scripts:/scripts
     entrypoint: ["/bin/bash", "/scripts/spanner-init.sh"]
     restart: on-failure
+    environment:
+      - SPANNER_EMULATOR_HOST=spanner-emulator:9010
+      - CLOUDSDK_API_ENDPOINT_OVERRIDES_SPANNER=http://spanner-emulator:9020/
     <<: *env
 
   atlas-migrate:
@@ -56,6 +62,8 @@ services:
     depends_on:
       spanner-init:
         condition: service_completed_successfully
+    environment:
+      - ATLAS_NO_LOGIN=1
     volumes:
       - ./scripts:/scripts
       - ./db:/usr/src/app/db

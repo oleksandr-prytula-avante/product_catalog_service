@@ -15,6 +15,7 @@ if [ -z "$(ls -A /usr/src/app/db/migrations 2>/dev/null)" ]; then
     --to file://db/schema.sql
 fi
 
+
 log "Applying migrations"
 
 atlas migrate apply --env local
