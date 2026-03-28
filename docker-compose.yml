@@ -1,38 +1,37 @@
-x-env: &env
-  env_file:
-    - .env
+x-spanner-id-vars: &spanner-id-vars
+  SPANNER_PROJECT_ID: ${SPANNER_PROJECT_ID}
+  SPANNER_INSTANCE_ID: ${SPANNER_INSTANCE_ID}
+  SPANNER_DATABASE_ID: ${SPANNER_DATABASE_ID}
+  SPANNER_EMULATOR_HOST: spanner-emulator:9010
+
+x-app-common: &app-common
+  ports:
+    - "${APP_PORT}:${APP_PORT}"
+  volumes:
+    - .:/usr/src/app
+  working_dir: /usr/src/app
+  depends_on:
+    - spanner-emulator
+  environment:
+    <<: *spanner-id-vars
 
 services:
   app-dev:
+    <<: *app-common
     profiles: ["dev"]
     build:
       context: .
       dockerfile: docker/app.dev.Dockerfile
-    ports:
-      - "${APP_PORT}:${APP_PORT}"
-    volumes:
-      - .:/usr/src/app
-    working_dir: /usr/src/app
     command: air
     restart: unless-stopped
-    depends_on:
-      - spanner-emulator
-    <<: *env
 
   app-build:
+    <<: *app-common
     profiles: ["build"]
     build:
       context: .
       dockerfile: docker/app.build.Dockerfile
-    ports:
-      - "${APP_PORT}:${APP_PORT}"
-    volumes:
-      - .:/usr/src/app
-    working_dir: /usr/src/app
     restart: always
-    depends_on:
-      - spanner-emulator
-    <<: *env
 
   spanner-emulator:
     image: gcr.io/cloud-spanner-emulator/emulator
@@ -40,7 +39,8 @@ services:
     ports:
       - "9010:9010"
       - "9020:9020"
-    <<: *env
+    environment:
+      <<: *spanner-id-vars
   
   spanner-init:
     image: google/cloud-sdk:slim
@@ -51,25 +51,21 @@ services:
     entrypoint: ["/bin/bash", "/scripts/spanner-init.sh"]
     restart: on-failure
     environment:
-      - SPANNER_EMULATOR_HOST=spanner-emulator:9010
-      - CLOUDSDK_API_ENDPOINT_OVERRIDES_SPANNER=http://spanner-emulator:9020/
-    <<: *env
+      <<: *spanner-id-vars
+      CLOUDSDK_API_ENDPOINT_OVERRIDES_SPANNER: http://spanner-emulator:9020/
 
-  atlas-migrate:
+  wrench-migrate:
     build:
       context: .
-      dockerfile: docker/atlas.Dockerfile
+      dockerfile: docker/wrench.Dockerfile
     depends_on:
       spanner-init:
         condition: service_completed_successfully
-    environment:
-      - ATLAS_NO_LOGIN=1
-      - SPANNER_EMULATOR_HOST=spanner-emulator:9010
     volumes:
-      - ./scripts:/scripts
       - ./db:/usr/src/app/db
-      - ./atlas.hcl:/usr/src/app/atlas.hcl
+      - ./scripts:/scripts
     working_dir: /usr/src/app
-    entrypoint: ["/bin/bash", "/scripts/atlas-run.sh"]
+    entrypoint: ["/bin/sh", "/scripts/wrench-migrate.sh"]
     restart: no
-    <<: *env
+    environment:
+      <<: *spanner-id-vars

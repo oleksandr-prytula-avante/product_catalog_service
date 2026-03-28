@@ -60,7 +60,7 @@ Transport (gRPC)
 | Local DB | Spanner Emulator (`gcr.io/cloud-spanner-emulator/emulator`) |
 | Transport | gRPC + Protocol Buffers |
 | Transactions | `github.com/Vektor-AI/commitplan` (Spanner driver) |
-| Migrations | [Atlas](https://atlasgo.io/) |
+| Migrations | [Wrench](https://github.com/cloudspannerecosystem/wrench) |
 | Hot Reload | [Air](https://github.com/air-verse/air) |
 | Containerization | Docker Compose |
 
@@ -70,57 +70,25 @@ Transport (gRPC)
 
 ```
 product_catalog_service/
-├── cmd/
-│   └── server/
-│       └── main.go                  # gRPC server entry point
-├── internal/
-│   ├── app/
-│   │   └── product/
-│   │       ├── domain/              # Pure business logic
-│   │       │   ├── product.go       # Product aggregate
-│   │       │   ├── discount.go      # Discount value object
-│   │       │   ├── money.go         # Money value object (big.Rat)
-│   │       │   ├── domain_events.go # Domain event structs
-│   │       │   ├── domain_errors.go # Sentinel error values
-│   │       │   └── services/
-│   │       │       └── pricing_calculator.go
-│   │       ├── usecases/            # Application commands
-│   │       │   ├── create_product/interactor.go
-│   │       │   ├── update_product/interactor.go
-│   │       │   ├── apply_discount/interactor.go
-│   │       │   └── activate_product/interactor.go
-│   │       ├── queries/             # Read-side handlers
-│   │       │   ├── get_product/
-│   │       │   └── list_products/
-│   │       ├── contracts/           # Interfaces (repo, read model)
-│   │       └── repo/                # Spanner repository implementation
-│   ├── models/
-│   │   ├── m_product/               # Spanner row structs for products
-│   │   └── m_outbox/                # Spanner row structs for outbox
-│   ├── transport/
-│   │   └── grpc/product/            # gRPC handlers and mappers
-│   └── pkg/
-│       ├── committer/               # CommitPlan wrapper
-│       └── clock/                   # Clock abstraction for testing
-├── proto/
-│   └── product/v1/
-│       └── product_service.proto    # gRPC service definition
-├── db/
-│   ├── schema.sql                   # Spanner DDL (source of truth)
-│   └── migrations/                  # Atlas-generated migration files
-├── scripts/
-│   ├── atlas-run.sh                 # Migration entrypoint
-│   ├── spanner-init.sh              # Emulator instance/database init
-│   └── log.sh                       # Shared logging helpers
-├── docker/
-│   ├── app.dev.Dockerfile           # Dev image with Air hot-reload
-│   ├── app.build.Dockerfile         # Production build image
-│   └── atlas.Dockerfile             # Atlas migration runner image
-├── atlas.hcl                        # Atlas environment config
-├── docker-compose.yml
-├── air.toml                          # Air hot-reload config
+├── main.go
 ├── go.mod
-└── .env                              # Local environment variables (not committed)
+├── air.toml
+├── docker-compose.yml
+├── test_task.md
+├── db/
+│   ├── schema.sql
+│   ├── wrench.hcl
+│   └── migrations/
+├── scripts/
+│   ├── log.sh
+│   ├── spanner-init.sh
+│   └── wrench-migrate.sh
+├── docker/
+│   ├── app.build.Dockerfile
+│   ├── app.dev.Dockerfile
+│   └── atlas.Dockerfile
+├── tmp/
+└── .env
 ```
 
 ---
@@ -182,7 +150,7 @@ cd product_catalog_service
 **2. Create your `.env` file**
 
 ```sh
-cp .env.example .env   # or create manually — see Environment Variables below
+# Create manually (example values are listed below)
 ```
 
 **3. Start the full development stack**
@@ -194,10 +162,10 @@ docker compose --profile dev up --build
 This will start, in order:
 1. `spanner-emulator` — Cloud Spanner emulator
 2. `spanner-init` — creates the Spanner instance and database via `gcloud`
-3. `atlas-migrate` — auto-generates and applies migrations from `db/schema.sql`
+3. `wrench-migrate` — applies migration files from `db/migrations`
 4. `app-dev` — the Go service with Air hot-reload
 
-The service will be available at `http://localhost:${PORT}`.
+The service will be available at `localhost:${APP_PORT}`.
 
 ---
 
@@ -206,21 +174,21 @@ The service will be available at `http://localhost:${PORT}`.
 Create a `.env` file in the project root:
 
 ```dotenv
-PORT=8080
+APP_PORT=8080
 
 # Spanner
 SPANNER_PROJECT_ID=product-catalog-project
-SPANNER_INSTANCE=main
-SPANNER_DATABASE=product-catalog
+SPANNER_INSTANCE_ID=main
+SPANNER_DATABASE_ID=product-catalog
 SPANNER_EMULATOR_HOST=spanner-emulator:9010
 ```
 
 | Variable | Description |
 |---|---|
-| `PORT` | HTTP/gRPC port the service listens on |
+| `APP_PORT` | HTTP/gRPC port the service listens on |
 | `SPANNER_PROJECT_ID` | GCP project ID (any value works for the emulator) |
-| `SPANNER_INSTANCE` | Spanner instance name |
-| `SPANNER_DATABASE` | Spanner database name |
+| `SPANNER_INSTANCE_ID` | Spanner instance name |
+| `SPANNER_DATABASE_ID` | Spanner database name |
 | `SPANNER_EMULATOR_HOST` | Emulator address used by the Go Spanner client |
 
 ---
@@ -231,7 +199,7 @@ SPANNER_EMULATOR_HOST=spanner-emulator:9010
 |---|---|---|---|
 | `spanner-emulator` | `gcr.io/cloud-spanner-emulator/emulator` | always | Cloud Spanner local emulator |
 | `spanner-init` | `google/cloud-sdk:slim` | always | Creates Spanner instance and database |
-| `atlas-migrate` | `docker/atlas.Dockerfile` | always | Runs Atlas schema migrations |
+| `wrench-migrate` | `ghcr.io/cloudspannerecosystem/wrench:1.13.2` | always | Runs Spanner migrations from `db/migrations` |
 | `app-dev` | `docker/app.dev.Dockerfile` | `dev` | Go service with Air hot-reload |
 | `app-build` | `docker/app.build.Dockerfile` | `build` | Compiled production binary |
 
@@ -240,7 +208,7 @@ SPANNER_EMULATOR_HOST=spanner-emulator:9010
 ```
 spanner-emulator
     └── spanner-init  (waits for emulator HTTP port 9020)
-            └── atlas-migrate  (waits for spanner-init to complete successfully)
+            └── wrench-migrate  (waits for spanner-init to start)
                     └── app-dev / app-build
 ```
 
@@ -248,22 +216,19 @@ spanner-emulator
 
 ## Database Migrations
 
-Migrations are managed by [Atlas](https://atlasgo.io/) using `db/schema.sql` as the source of truth.
+Migrations are applied by [wrench](https://github.com/cloudspannerecosystem/wrench) from migration files in `db/migrations`.
 
 **How it works:**
 
-1. On first run, `atlas-migrate` checks if `db/migrations/` is empty
-2. If empty, it generates an initial migration: `atlas migrate diff init --env local --to file://db/schema.sql`
-3. Then it applies all pending migrations: `atlas migrate apply --env local`
+1. `spanner-init` ensures the instance and database exist.
+2. `wrench-migrate` runs `wrench migrate up --directory ./db`.
+3. Wrench reads migration files from `db/migrations`.
 
-**To generate a new migration after modifying `db/schema.sql`:**
+**To apply migrations manually:**
 
 ```sh
-# Remove existing migrations to regenerate, or run diff manually:
-docker compose run --rm atlas-migrate atlas migrate diff <name> --env local --to file://db/schema.sql
+docker compose up wrench-migrate --no-deps
 ```
-
-Atlas configuration is in [`atlas.hcl`](atlas.hcl).
 
 ---
 
@@ -277,7 +242,7 @@ docker compose --profile dev up --build
 
 # View logs for a specific service
 docker compose logs -f app-dev
-docker compose logs -f atlas-migrate
+docker compose logs -f wrench-migrate
 
 # Rebuild a single service
 docker compose --profile dev up --build app-dev
